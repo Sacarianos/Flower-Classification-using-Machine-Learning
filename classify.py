@@ -1,8 +1,8 @@
 
-#Base on source code from the book Practical Python and OpenCV
-# import the necessary packages
+# Base on source code from the book Practical Python and OpenCV
+# Import the necessary packages
 from __future__ import print_function
-from pyimagesearch.rgbhistogram import RGBHistogram
+from histogram.rgbhistogram import RGBHistogram
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import train_test_split
@@ -24,56 +24,59 @@ ap.add_argument("-m", "--masks", required = True,
 args = vars(ap.parse_args())
 
 
-# grab the image and mask paths
+# Grab the image masks and targets paths
 targetPaths = sorted(glob.glob(args["targets"] + "/*.jpg"))
 imagePaths = sorted(glob.glob(args["images"] + "/*.jpg"))
 maskPaths = sorted(glob.glob(args["masks"] + "/*.png"))
 
 
-# initialize the list of data and class label targets
+# Initialize the list of data and targets(not the tragets form the target folder but the images tha will be used for testing the random classifier)
 data = []
 target = []
 
-# initialize the image descriptor
+# Initialize the image descriptor
 desc = RGBHistogram([8, 8, 8])
 
-# loop over the image and mask paths
+# Loop over the image and mask paths
 for (imagePath, maskPath) in zip(imagePaths, maskPaths):
-	# load the image and mask
+
 	image = cv2.imread(imagePath)
 	mask = cv2.imread(maskPath)
 	mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
 
-	# describe the image
+	# Describe
 	features = desc.describe(image, mask)
 
-	# update the list of data and targets
+	# Update the list of data and targets
 	data.append(features)
 	target.append(imagePath.split("_")[-2])
 
-# grab the unique target names and encode the labels
+# Grab the unique target names and encode the labels
 targetNames = np.unique(target)
 le = LabelEncoder()
 target = le.fit_transform(target)
 
-# construct the training and testing splits
+# Construct the training and testing splits 70% training 30% testing
 (trainData, testData, trainTarget, testTarget) = train_test_split(data, target,
 	test_size = 0.3, random_state = 42)
 
-# train the classifier
+# Train the classifier
 model = RandomForestClassifier(n_estimators = 25, random_state = 84)
 model.fit(trainData, trainTarget)
 
-# evaluate the classifier
+# Test the classifier using the testing portion
 print(classification_report(testTarget, model.predict(testData),
 	target_names = targetNames))
 
-
+# Now that we have tested and trained we classify predict data from the Targets folder
+# TODO Add the correctly identified flowers to the dataset
+# TODO Inprove the masking method for new images because now it sucks
+# TODO Eventualy automate the masking process
 for i in np.arange(0, len(targetPaths)):
 
+	# Pull the target data
 	targetPath = targetPaths[i]
 	targetImage = cv2.imread(targetPath)
-
 	mask = np.zeros(targetImage.shape[:2], dtype = "uint8")
 	(cX, cY) = (targetImage.shape[1] // 2, targetImage.shape[0] // 2)
 	r = int(round(cX/3))
@@ -82,7 +85,7 @@ for i in np.arange(0, len(targetPaths)):
 
 
 
-	# predict what type of flower the image is
+	# redict what type of flower the image is YAY!
 	flower = le.inverse_transform(model.predict(features))[0]
 	print(targetPath)
 	print("This flower is a Motherfucking {}".format(flower.upper()))
